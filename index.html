@@ -107,8 +107,7 @@
         .input-row { margin-bottom: 15px; }
         .label-tech { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: block; }
         
-        /* Inputs */
-        input[type="text"], input[type="tel"] {
+        input[type="text"], input[type="tel"], input[type="number"] {
             width: 100%; background: #000; border: 1px solid #333; color: var(--glow);
             font-family: 'Share Tech Mono', monospace; font-size: 20px; padding: 12px;
             border-radius: 6px; outline: none; transition: 0.3s;
@@ -162,8 +161,6 @@
             text-transform: uppercase;
             font-size: 20px;
             line-height: 1.1;
-            
-            /* REMOVIDO: transform: rotate(-1deg); -> Agora é reto */
             transform: none; 
             
             border-top: 1px solid #e0dfd5;
@@ -232,7 +229,7 @@
         </div>
         <div class="input-row">
             <label class="label-tech">Litros (Opcional)</label>
-            <input type="tel" inputmode="numeric" id="liters" placeholder="0,00 L" onkeyup="maskCurrency(this)">
+            <input type="number" id="liters" placeholder="0.00 L">
         </div>
 
         <div class="mode-toggle">
@@ -258,7 +255,7 @@
         <div id="trip-input" style="display:none;">
             <div class="input-row">
                 <label class="label-tech">Distância Percorrida (KM)</label>
-                <input type="tel" inputmode="numeric" id="kmDistance" placeholder="000.0" onkeyup="maskCurrency(this)">
+                <input type="number" id="kmDistance" placeholder="000.0">
             </div>
         </div>
 
@@ -365,54 +362,51 @@
         else { odoDiv.style.display = 'block'; tripDiv.style.display = 'none'; }
     }
 
-    // --- MÁSCARAS DE DIGITAÇÃO INTELIGENTE ---
+    // --- MÁSCARAS ---
     
-    // Máscara para Moeda/Decimal (Ex: digita 550 -> vira 5,50)
+    // Máscara Automática (Divide por 100) - APENAS PREÇO E TOTAL
     function maskCurrency(input) {
-        let value = input.value.replace(/\D/g, ""); // Remove tudo que não é número
-        
-        if (value === "") {
-            input.value = "";
-            return;
-        }
-
-        // Divide por 100 para ter 2 casas decimais
+        let value = input.value.replace(/\D/g, "");
+        if (value === "") { input.value = ""; return; }
         value = (parseInt(value) / 100).toFixed(2) + "";
-        
-        // Troca ponto por virgula
         value = value.replace(".", ",");
-        
-        // Adiciona ponto de milhar (Opcional, mas bom para valores altos)
         value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        
         input.value = value;
     }
 
-    // Máscara para Inteiros (KM do painel geralmente não tem virgula)
+    // Máscara Inteira (Sem virgula) - Para Odômetro
     function maskInteger(input) {
-        input.value = input.value.replace(/\D/g, ""); // Apenas números
+        input.value = input.value.replace(/\D/g, "");
     }
 
-    // Função para interpretar o valor formatado de volta para número (para cálculo)
+    // Função para ler o valor dos campos mascarados
     function parseLocaleNumber(stringNumber) {
         if (!stringNumber) return 0;
-        // Remove pontos de milhar e troca virgula por ponto
-        let cleaned = stringNumber.replace(/\./g, '').replace(',', '.');
-        return parseFloat(cleaned);
+        // Se for string, limpa pontos e troca virgula
+        if (typeof stringNumber === 'string') {
+             let cleaned = stringNumber.replace(/\./g, '').replace(',', '.');
+             return parseFloat(cleaned);
+        }
+        return parseFloat(stringNumber);
     }
 
     function calculate() {
-        // Usa o novo parser para ler os valores com virgula
+        // Campos com Máscara
         const price = parseLocaleNumber(document.getElementById('price').value);
         const total = parseLocaleNumber(document.getElementById('total').value);
-        let litersInput = parseLocaleNumber(document.getElementById('liters').value);
+        
+        // Campos Sem Máscara (Lê direto, aceita ponto ou virgula nativo)
+        let litersVal = document.getElementById('liters').value.replace(',', '.');
+        let litersInput = parseFloat(litersVal) || 0;
         
         let distance = 0;
         const isTripMode = document.getElementById('modeSwitch').checked;
 
         if (isTripMode) {
-            distance = parseLocaleNumber(document.getElementById('kmDistance').value);
+            let distVal = document.getElementById('kmDistance').value.replace(',', '.');
+            distance = parseFloat(distVal) || 0;
         } else {
+            // KM Start/End são inteiros (mas parseamos para garantir)
             const start = parseLocaleNumber(document.getElementById('kmStart').value);
             const end = parseLocaleNumber(document.getElementById('kmEnd').value);
             if (end > start) {
@@ -441,7 +435,6 @@
         document.getElementById('rec-time').innerText = now.toLocaleTimeString('pt-BR');
         document.getElementById('rec-fuel').innerText = currentFuel.toUpperCase();
         
-        // Formatando resultados com virgula
         document.getElementById('rec-price').innerText = price > 0 ? price.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '--';
         document.getElementById('rec-liters').innerText = finalLiters.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + " L";
         document.getElementById('rec-total').innerText = (total > 0 ? total : (finalLiters*price)).toLocaleString('pt-BR', {minimumFractionDigits: 2});
@@ -467,9 +460,15 @@
             html2canvas(receiptElement, { scale: 2, backgroundColor: null, useCORS: true }).then(canvas => {
                 canvas.toBlob(async (blob) => {
                     const file = new File([blob], "comprovante_consumo.png", { type: "image/png" });
+                    
+                    // Verifica suporte a compartilhamento
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                         try {
-                            await navigator.share({ files: [file], title: 'Calculador de Consumo', text: 'Olha o desempenho do meu carro!' });
+                            await navigator.share({ 
+                                files: [file], 
+                                title: 'Calculador de Consumo', 
+                                // REMOVIDO: text: 'Olha o desempenho...' 
+                            });
                         } catch (error) { console.log('Cancelado pelo usuário', error); }
                     } else {
                         const link = document.createElement('a');
@@ -490,7 +489,6 @@
         R = parseInt(R * (100 + percent) / 100);
         G = parseInt(G * (100 + percent) / 100);
         B = parseInt(B * (100 + percent) / 100);
-        R = (R<255)?R:255; G = (G<255)?G:255; B = (B<255)?B:255;
         return "#"+RR+GG+BB;
     }
 </script>
