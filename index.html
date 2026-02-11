@@ -6,15 +6,25 @@
     <title>Calculador de Consumo</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <style>
-        /* --- VARIÁVEIS --- */
+        @font-face {
+            font-family: 'Merchant Copy';
+            src: url('Merchant_Copy.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         :root {
             --carbon: #111;
             --metal: #222;
             --text: #eee;
-            --glow: #ff3b30; /* Dinâmico */
+            --glow: #ff3b30;
             --led-off: #330000;
+            --receipt-base-color: #fffdf0; 
+            --ink-color: #1a1a1a;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -22,7 +32,6 @@
         body {
             font-family: 'Chakra Petch', sans-serif;
             background-color: var(--carbon);
-            /* Textura Fibra de Carbono */
             background-image: 
                 linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000),
                 linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000);
@@ -37,14 +46,8 @@
             min-height: 100vh;
         }
 
-        .container {
-            width: 100%;
-            max-width: 400px;
-            position: relative;
-            z-index: 2;
-        }
+        .container { width: 100%; max-width: 400px; position: relative; z-index: 2; }
 
-        /* --- TÍTULO METÁLICO --- */
         h1 {
             font-family: 'Russo One', sans-serif;
             text-align: center;
@@ -58,21 +61,16 @@
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
         }
 
-        /* --- CARD PAINEL --- */
         .dashboard-panel {
             background: linear-gradient(180deg, #2b2b2b 0%, #1a1a1a 100%);
             border: 1px solid #444;
             border-radius: 16px;
             padding: 25px;
-            box-shadow: 
-                0 0 0 1px #000, 
-                0 10px 30px rgba(0,0,0,0.8),
-                inset 0 1px 0 rgba(255,255,255,0.1);
+            box-shadow: 0 0 0 1px #000, 0 10px 30px rgba(0,0,0,0.8);
             position: relative;
             margin-bottom: 25px;
         }
 
-        /* Parafusos Allen */
         .bolt {
             position: absolute;
             width: 10px; height: 10px;
@@ -81,287 +79,125 @@
             box-shadow: 0 1px 2px #000;
             border: 1px solid #111;
         }
-        .tl { top: 10px; left: 10px; }
-        .tr { top: 10px; right: 10px; }
-        .bl { bottom: 10px; left: 10px; }
-        .br { bottom: 10px; right: 10px; }
+        .tl { top: 10px; left: 10px; } .tr { top: 10px; right: 10px; }
+        .bl { bottom: 10px; left: 10px; } .br { bottom: 10px; right: 10px; }
 
-        /* --- SELETOR DE COMBUSTÍVEL (SIMÉTRICO) --- */
         .fuel-switch {
-            display: flex;
-            position: relative;
-            background: #050505;
-            padding: 4px;
-            border-radius: 50px;
-            margin-bottom: 25px;
-            border: 1px solid #333;
-            box-shadow: inset 0 3px 10px #000;
-            overflow: hidden;
-            width: 100%;
+            display: flex; position: relative; background: #050505; padding: 4px; border-radius: 50px;
+            margin-bottom: 25px; border: 1px solid #333; box-shadow: inset 0 3px 10px #000; overflow: hidden; width: 100%;
         }
-
         .fuel-switch label {
-            flex: 1; /* Força divisão igual */
-            text-align: center;
-            padding: 12px 0;
-            font-size: 14px;
-            font-weight: 700;
-            text-transform: uppercase;
-            cursor: pointer;
-            z-index: 2;
-            color: #666;
-            transition: color 0.3s ease;
-            font-family: 'Russo One', sans-serif;
-            user-select: none;
-            width: 33.33%; /* Garante a simetria */
+            flex: 1; text-align: center; padding: 12px 0; font-size: 14px; font-weight: 700;
+            text-transform: uppercase; cursor: pointer; z-index: 2; color: #666; transition: color 0.3s ease;
+            font-family: 'Russo One', sans-serif; width: 33.33%;
         }
-        
         .fuel-switch input { display: none; }
-        
         .fuel-glider {
-            position: absolute;
-            top: 4px;
-            left: 4px;
-            /* Cálculo exato para simetria considerando o padding de 4px total */
-            width: calc(33.33% - 2.6px); 
-            height: calc(100% - 8px);
-            border-radius: 40px;
-            background: linear-gradient(180deg, #333 0%, #222 100%);
-            border-top: 1px solid #555;
-            transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 1;
+            position: absolute; top: 4px; left: 4px; width: calc(33.33% - 2.6px); height: calc(100% - 8px);
+            border-radius: 40px; background: linear-gradient(180deg, #333 0%, #222 100%); border-top: 1px solid #555;
+            transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1;
         }
-
-        /* Estados da Animação */
-        #gas:checked ~ .fuel-glider { 
-            transform: translateX(0%); 
-            background: linear-gradient(180deg, #cc2900 0%, #990000 100%);
-            box-shadow: 0 0 15px rgba(255, 59, 48, 0.6);
-            border-color: #ff5e55;
-        }
+        #gas:checked ~ .fuel-glider { transform: translateX(0%); background: linear-gradient(180deg, #cc2900 0%, #990000 100%); box-shadow: 0 0 15px rgba(255, 59, 48, 0.6); border-color: #ff5e55; }
         #gas:checked + label { color: #fff; text-shadow: 0 0 5px rgba(0,0,0,0.5); }
-
-        #alc:checked ~ .fuel-glider { 
-            transform: translateX(100%); 
-            background: linear-gradient(180deg, #2dce55 0%, #1e8e39 100%);
-            box-shadow: 0 0 15px rgba(52, 199, 89, 0.6);
-            border-color: #5eff86;
-        }
+        #alc:checked ~ .fuel-glider { transform: translateX(100%); background: linear-gradient(180deg, #2dce55 0%, #1e8e39 100%); box-shadow: 0 0 15px rgba(52, 199, 89, 0.6); border-color: #5eff86; }
         #alc:checked + label { color: #fff; text-shadow: 0 0 5px rgba(0,0,0,0.5); }
-
-        /* Ajuste fino para o Diesel ficar perfeito no final */
-        #dsl:checked ~ .fuel-glider { 
-            transform: translateX(205%);
-            background: linear-gradient(180deg, #ff9f0a 0%, #c47700 100%);
-            box-shadow: 0 0 15px rgba(255, 149, 0, 0.6);
-            border-color: #ffc060;
-        }
+        #dsl:checked ~ .fuel-glider { transform: translateX(205%); background: linear-gradient(180deg, #ff9f0a 0%, #c47700 100%); box-shadow: 0 0 15px rgba(255, 149, 0, 0.6); border-color: #ffc060; }
         #dsl:checked + label { color: #fff; text-shadow: 0 0 5px rgba(0,0,0,0.5); }
 
+        .input-row { margin-bottom: 15px; }
+        .label-tech { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: block; }
+        input[type="text"], input[type="number"] {
+            width: 100%; background: #000; border: 1px solid #333; color: var(--glow);
+            font-family: 'Share Tech Mono', monospace; font-size: 20px; padding: 12px;
+            border-radius: 6px; outline: none; transition: 0.3s;
+        }
+        input:focus { border-color: var(--glow); box-shadow: 0 0 15px var(--glow); }
 
-        /* --- SWITCH MODE --- */
         .mode-toggle {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 20px 0;
-            background: rgba(0,0,0,0.3);
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #333;
+            display: flex; justify-content: space-between; align-items: center;
+            margin: 20px 0; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid #333;
         }
-
-        .toggle-label {
-            font-size: 12px;
-            text-transform: uppercase;
-            color: #888;
-            font-weight: 700;
-        }
-
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 24px;
-        }
+        .toggle-label { font-size: 12px; text-transform: uppercase; color: #888; font-weight: 700; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider-round {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #111;
-            border: 1px solid #444;
-            transition: .4s;
-            border-radius: 34px;
-        }
-        .slider-round:before {
-            position: absolute;
-            content: "";
-            height: 16px; width: 16px;
-            left: 3px; bottom: 3px;
-            background-color: #888;
-            transition: .4s;
-            border-radius: 50%;
-            box-shadow: inset 1px 1px 2px #fff;
-        }
+        .slider-round { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #111; border: 1px solid #444; transition: .4s; border-radius: 34px; }
+        .slider-round:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: #888; transition: .4s; border-radius: 50%; box-shadow: inset 1px 1px 2px #fff; }
         input:checked + .slider-round { background-color: var(--glow); border-color: var(--glow); }
         input:checked + .slider-round:before { transform: translateX(26px); background-color: #fff; }
 
-
-        /* --- INPUTS --- */
-        .input-row { margin-bottom: 15px; }
-        
-        .label-tech {
-            font-size: 11px;
-            color: #aaa;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 6px;
-            display: block;
-        }
-
-        /* Usei type text com inputmode decimal para melhor controle da virgula */
-        input[type="text"], input[type="number"] {
-            width: 100%;
-            background: #000;
-            border: 1px solid #333;
-            color: var(--glow);
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 20px;
-            padding: 12px;
-            border-radius: 6px;
-            outline: none;
-            transition: 0.3s;
-        }
-        input:focus {
-            border-color: var(--glow);
-            box-shadow: 0 0 15px var(--glow);
-        }
-
-
-        /* --- BOTÃO IGNIÇÃO --- */
         .btn-start {
-            width: 100%;
-            background: radial-gradient(circle, #333 0%, #111 100%);
-            border: 2px solid #444;
-            color: #888;
-            font-family: 'Russo One', sans-serif;
-            font-size: 18px;
-            text-transform: uppercase;
-            padding: 18px;
-            border-radius: 50px;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: 0.3s;
-            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
-            position: relative;
-            overflow: hidden;
+            width: 100%; background: radial-gradient(circle, #333 0%, #111 100%);
+            border: 2px solid #444; color: #888; font-family: 'Russo One', sans-serif;
+            font-size: 18px; text-transform: uppercase; padding: 18px; border-radius: 50px;
+            cursor: pointer; margin-top: 10px; transition: 0.3s; box-shadow: 0 5px 10px rgba(0,0,0,0.5);
         }
-        
-        .btn-start:hover {
-            border-color: var(--glow);
-            color: #fff;
-            text-shadow: 0 0 10px var(--glow);
-            box-shadow: 0 0 20px var(--glow);
-        }
-        
+        .btn-start:hover { border-color: var(--glow); color: #fff; text-shadow: 0 0 10px var(--glow); box-shadow: 0 0 20px var(--glow); }
         .btn-start:active { transform: scale(0.98); }
 
-
-        /* --- RESULTADO --- */
-        #telemetry {
+        /* --- CUPOM FISCAL --- */
+        #receipt-container {
             display: none;
-            background: #000;
-            border: 2px solid #333;
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 25px;
-            position: relative;
-            box-shadow: inset 0 0 40px rgba(0,0,0,0.9);
-        }
-
-        .led-indicator {
-            position: absolute;
-            top: 15px; right: 15px;
-            width: 12px; height: 12px;
-            background-color: var(--led-off);
-            border-radius: 50%;
-            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.8);
-            border: 1px solid #222;
-            transition: background-color 0.3s;
-        }
-        
-        .led-active {
-            background-color: var(--glow);
-            box-shadow: 0 0 10px var(--glow), 0 0 20px var(--glow);
-            animation: pulse 0.8s infinite alternate;
-        }
-
-        @keyframes pulse { from { opacity: 0.4; } to { opacity: 1; } }
-
-        .main-stat {
-            text-align: center;
-            border-bottom: 1px solid #222;
-            padding-bottom: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .big-number {
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 52px;
-            color: var(--glow);
-            text-shadow: 0 0 15px var(--glow);
-        }
-        
-        .unit { font-size: 16px; color: #666; font-weight: 700; }
-
-        .stat-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .stat-box {
-            background: #0a0a0a;
-            padding: 10px;
-            border-radius: 4px;
-            border-left: 2px solid #333;
-        }
-        
-        .stat-val {
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 16px;
-            color: #fff;
-            margin-top: 4px;
-        }
-
-        .diagnosis-text {
-            text-align: center;
-            font-size: 14px;
-            text-transform: uppercase;
-            font-weight: 700;
-            margin-top: 15px;
-            padding: 8px;
-            background: #111;
-            border-radius: 4px;
-            color: var(--glow);
-            border: 1px solid #333;
-        }
-
-        footer {
-            margin-top: 30px;
-            text-align: center;
+            margin-top: 40px;
             width: 100%;
+            perspective: 1000px;
         }
-        footer a {
-            font-size: 12px;
-            color: #666;
-            text-decoration: none;
+
+        .receipt {
+            background-color: var(--receipt-base-color);
+            background-image: url('wrinkled-paper-texture-7.jpg');
+            background-size: cover; 
+            background-blend-mode: multiply;
+
+            width: 100%;
+            max-width: 320px;
+            margin: 0 auto;
+            padding: 30px 20px 30px 20px;
+            position: relative;
+            
+            font-family: 'Merchant Copy', 'VT323', monospace; 
+            color: var(--ink-color);
+            
+            box-shadow: 0 15px 30px rgba(0,0,0,0.7);
             text-transform: uppercase;
-            letter-spacing: 2px;
-            transition: 0.3s;
+            font-size: 20px;
+            line-height: 1.1;
+            transform: rotate(-1deg);
+            
+            /* Bordas retas (corte seco) */
+            border-top: 1px solid #e0dfd5;
+            border-bottom: 1px solid #e0dfd5;
         }
-        footer a:hover { color: var(--glow); text-shadow: 0 0 10px var(--glow); }
+
+        /* Removi os pseudo-elementos ::before e ::after que faziam o picotado */
+
+        .receipt-header { text-align: center; margin-bottom: 15px; border-bottom: 1px dashed #555; padding-bottom: 10px; }
+        .receipt-title { font-size: 26px; font-weight: bold; display: block; margin-bottom: 5px; letter-spacing: -1px; }
+        .receipt-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .receipt-divider { border-bottom: 1px dashed #555; margin: 12px 0; }
+        .receipt-total { font-size: 32px; font-weight: bold; text-align: right; margin-top: 5px; }
+        .receipt-footer { text-align: center; margin-top: 20px; font-size: 16px; padding-bottom: 10px;}
+        
+        .barcode-img { 
+            display: block;
+            margin: 15px auto 0 auto;
+            width: 80%;
+            height: 50px;
+            mix-blend-mode: multiply;
+            opacity: 0.9;
+        }
+
+        .btn-share {
+            background: #fff; color: #000; border: none; padding: 12px 20px;
+            font-family: 'Chakra Petch', sans-serif; font-weight: bold; text-transform: uppercase;
+            margin-top: 25px; cursor: pointer; border-radius: 4px; display: block;
+            width: 100%; max-width: 320px; margin-left: auto; margin-right: auto;
+            box-shadow: 0 0 15px rgba(255,255,255,0.2); transition: 0.3s;
+        }
+        .btn-share:hover { background: var(--glow); color: #fff; }
+
+        footer { margin-top: 50px; text-align: center; width: 100%; }
+        footer a { font-size: 12px; color: #666; text-decoration: none; text-transform: uppercase; letter-spacing: 2px; }
+        footer a:hover { color: var(--glow); }
 
     </style>
 </head>
@@ -378,13 +214,10 @@
         <div class="fuel-switch">
             <input type="radio" name="fuel" id="gas" value="gasolina" checked onchange="updateSystem('gasolina')">
             <label for="gas">Gasolina</label>
-            
             <input type="radio" name="fuel" id="alc" value="etanol" onchange="updateSystem('etanol')">
             <label for="alc">Etanol</label>
-            
             <input type="radio" name="fuel" id="dsl" value="diesel" onchange="updateSystem('diesel')">
             <label for="dsl">Diesel</label>
-            
             <div class="fuel-glider"></div>
         </div>
 
@@ -397,7 +230,7 @@
             <input type="text" inputmode="decimal" id="total" placeholder="0.00">
         </div>
         <div class="input-row">
-            <label class="label-tech">Litros (Opcional se preencher acima)</label>
+            <label class="label-tech">Litros (Opcional)</label>
             <input type="text" inputmode="decimal" id="liters" placeholder="0.00 L">
         </div>
 
@@ -431,34 +264,67 @@
         <button class="btn-start" onclick="calculate()">START ENGINE</button>
     </div>
 
-    <div id="telemetry">
-        <div class="led-indicator" id="statusLed"></div>
+    <div id="receipt-container">
         
-        <div class="main-stat">
-            <div class="label-tech">Eficiência Média</div>
-            <span class="big-number" id="res-kml">0.0</span> <span class="unit">KM/L</span>
+        <div class="receipt" id="receipt">
+            <div class="receipt-header">
+                <span class="receipt-title">AUTO POSTO</span>
+                <span>CNPJ: 12.345.67890/0001-99</span><br>
+                <span>RUA DA VELOCIDADE, 300</span>
+            </div>
+            
+            <div class="receipt-row">
+                <span id="rec-date">--/--/--</span>
+                <span id="rec-time">--:--</span>
+            </div>
+            <div class="receipt-divider"></div>
+            
+            <div class="receipt-row">
+                <span>ITEM</span>
+                <span>VLR UNIT</span>
+            </div>
+            <div class="receipt-row">
+                <span id="rec-fuel">COMBUSTIVEL</span>
+                <span id="rec-price">0.00</span>
+            </div>
+            <div class="receipt-row">
+                <span>QTD LITROS</span>
+                <span id="rec-liters">0.00 L</span>
+            </div>
+            <div class="receipt-divider"></div>
+            
+            <div class="receipt-row">
+                <span style="font-size: 22px;">TOTAL R$</span>
+                <span class="receipt-total" id="rec-total">0.00</span>
+            </div>
+            
+            <div class="receipt-divider"></div>
+            <div style="text-align:center; font-weight:bold; margin-bottom:5px;">*** TELEMETRIA ***</div>
+            
+            <div class="receipt-row">
+                <span>DISTANCIA:</span>
+                <span id="rec-dist">0 KM</span>
+            </div>
+            <div class="receipt-row">
+                <span>MEDIA:</span>
+                <span id="rec-kml" style="font-weight:bold; font-size:22px;">0.0 KM/L</span>
+            </div>
+            <div class="receipt-row">
+                <span>CUSTO/KM:</span>
+                <span id="rec-cost">R$ 0.00</span>
+            </div>
+            
+            <div class="receipt-footer">
+                <div class="receipt-divider"></div>
+                <span id="rec-status">ANALISE CONCLUIDA</span><br>
+                <br>
+                <span>Obrigado pela visita</span>
+                
+                <img src="barcode.png" alt="Barcode" class="barcode-img">
+            </div>
         </div>
 
-        <div class="stat-grid">
-            <div class="stat-box">
-                <div class="label-tech">Custo/KM</div>
-                <div class="stat-val" id="res-costKm">R$ 0.00</div>
-            </div>
-            <div class="stat-box">
-                <div class="label-tech">Litros Usados</div>
-                <div class="stat-val" id="res-liters">0.0 L</div>
-            </div>
-            <div class="stat-box">
-                <div class="label-tech">Custo/100km</div>
-                <div class="stat-val" id="res-cost100">R$ 0.00</div>
-            </div>
-            <div class="stat-box">
-                <div class="label-tech">Distância</div>
-                <div class="stat-val" id="res-dist">0 km</div>
-            </div>
-        </div>
-
-        <div class="diagnosis-text" id="diag-text">AGUARDANDO DADOS...</div>
+        <button class="btn-share" onclick="downloadReceipt()">SALVAR COMPROVANTE</button>
     </div>
 
     <footer>
@@ -468,12 +334,7 @@
 </div>
 
 <script>
-    const colors = {
-        gasolina: '#ff3b30',
-        etanol: '#34c759',
-        diesel: '#ff9500'
-    };
-
+    const colors = { gasolina: '#ff3b30', etanol: '#34c759', diesel: '#ff9500' };
     let currentFuel = 'gasolina';
 
     window.onload = function() {
@@ -497,35 +358,24 @@
         document.getElementById('label-odo').style.color = isTripMode ? '#888' : '#fff';
         document.getElementById('label-trip').style.color = isTripMode ? '#fff' : '#888';
 
-        if (isTripMode) {
-            odoDiv.style.display = 'none';
-            tripDiv.style.display = 'block';
-        } else {
-            odoDiv.style.display = 'block';
-            tripDiv.style.display = 'none';
-        }
+        if (isTripMode) { odoDiv.style.display = 'none'; tripDiv.style.display = 'block'; }
+        else { odoDiv.style.display = 'block'; tripDiv.style.display = 'none'; }
     }
 
-    // --- FUNÇÃO INTELIGENTE DE PONTUAÇÃO ---
-    // Pega o valor, substitui virgula por ponto para o JS entender
     function getSafeFloat(id) {
         let val = document.getElementById(id).value;
         if (!val) return 0;
-        // Troca virgula por ponto
         val = val.replace(',', '.');
         return parseFloat(val);
     }
 
     function calculate() {
-        // Usa a função segura que aceita virgula
         const price = getSafeFloat('price');
         const total = getSafeFloat('total');
         let litersInput = getSafeFloat('liters');
-        
         let distance = 0;
         const isTripMode = document.getElementById('modeSwitch').checked;
 
-        // Lógica de Distância
         if (isTripMode) {
             distance = getSafeFloat('kmDistance');
         } else {
@@ -537,76 +387,59 @@
             }
         }
 
-        // --- LÓGICA INTELIGENTE DE LITROS ---
         let finalLiters = 0;
-        
-        // 1. Se o usuário digitou Litros, usa o valor dele (Prioridade)
-        if (litersInput > 0) {
-            finalLiters = litersInput;
-        } 
-        // 2. Se não digitou, mas tem Total e Preço, calcula
-        else if (total > 0 && price > 0) {
-            finalLiters = total / price;
-        }
+        if (litersInput > 0) finalLiters = litersInput;
+        else if (total > 0 && price > 0) finalLiters = total / price;
 
-        // Validação
         if (finalLiters <= 0 || distance <= 0) {
-            alert("ERRO: Preencha os Litros OU (Total + Preço), e verifique a distância.");
+            alert("ERRO: Verifique os dados inseridos.");
             return;
         }
 
-        // Cálculos Finais
         const kml = distance / finalLiters;
-        
-        // Custo por KM (só calcula se tivermos o total pago)
         let costPerKm = 0;
-        if (total > 0) {
-            costPerKm = total / distance;
-        } else if (price > 0) {
-            // Se só tiver Preço e Litros, calcula o total virtual
-            costPerKm = (finalLiters * price) / distance;
-        }
+        if (total > 0) costPerKm = total / distance;
+        else if (price > 0) costPerKm = (finalLiters * price) / distance;
+
+        // --- PREENCHER O CUPOM ---
+        const now = new Date();
+        document.getElementById('rec-date').innerText = now.toLocaleDateString('pt-BR');
+        document.getElementById('rec-time').innerText = now.toLocaleTimeString('pt-BR');
+        document.getElementById('rec-fuel').innerText = currentFuel.toUpperCase();
+        document.getElementById('rec-price').innerText = price > 0 ? price.toFixed(2) : '--';
+        document.getElementById('rec-liters').innerText = finalLiters.toFixed(2) + " L";
+        document.getElementById('rec-total').innerText = (total > 0 ? total : (finalLiters*price)).toFixed(2);
         
-        const costPer100 = costPerKm * 100;
+        document.getElementById('rec-dist').innerText = distance + " KM";
+        document.getElementById('rec-kml').innerText = kml.toFixed(1) + " KM/L";
+        document.getElementById('rec-cost').innerText = "R$ " + costPerKm.toFixed(2);
 
-        // Renderização
-        document.getElementById('res-kml').innerText = kml.toFixed(1).replace('.', ',');
-        document.getElementById('res-liters').innerText = finalLiters.toFixed(1).replace('.', ',') + " L";
-        document.getElementById('res-costKm').innerText = "R$ " + costPerKm.toFixed(2).replace('.', ',');
-        document.getElementById('res-cost100').innerText = "R$ " + costPer100.toFixed(0).replace('.', ',');
-        document.getElementById('res-dist').innerText = distance + " km";
-
-        doDiagnostics(kml);
+        let status = "CONSUMO NORMAL";
+        if (currentFuel === 'gasolina' && kml > 12) status = "ECONOMICO";
+        if (currentFuel === 'gasolina' && kml < 8) status = "ALTO CONSUMO";
         
-        const led = document.getElementById('statusLed');
-        led.classList.add('led-active');
+        document.getElementById('rec-status').innerText = status;
 
-        const panel = document.getElementById('telemetry');
-        panel.style.display = 'block';
-        panel.scrollIntoView({ behavior: 'smooth' });
+        const container = document.getElementById('receipt-container');
+        container.style.display = 'block';
+        container.scrollIntoView({ behavior: 'smooth' });
     }
 
-    function doDiagnostics(kml) {
-        const textDiv = document.getElementById('diag-text');
-        let msg = "Consumo Normal";
-        let isHigh = false;
-        let isEco = false;
-
-        if (currentFuel === 'gasolina') {
-            if (kml < 8) isHigh = true;
-            if (kml > 12) isEco = true;
-        } else if (currentFuel === 'etanol') {
-            if (kml < 6) isHigh = true;
-            if (kml > 9) isEco = true;
-        } else {
-            if (kml < 9) isHigh = true;
-            if (kml > 13) isEco = true;
-        }
-
-        if (isHigh) msg = "ALERTA: Consumo Alto";
-        if (isEco) msg = "OTIMIZADO: Econômico";
-
-        textDiv.innerText = msg;
+    function downloadReceipt() {
+        const receiptElement = document.getElementById('receipt');
+        
+        document.fonts.ready.then(function () {
+            html2canvas(receiptElement, {
+                scale: 2,
+                backgroundColor: null,
+                useCORS: true 
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'comprovante-consumo.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        });
     }
 
     function shadeColor(color, percent) {
@@ -617,9 +450,6 @@
         G = parseInt(G * (100 + percent) / 100);
         B = parseInt(B * (100 + percent) / 100);
         R = (R<255)?R:255; G = (G<255)?G:255; B = (B<255)?B:255;
-        var RR = ((R.toString(16).length==1)?"0"+R.toString(16):R.toString(16));
-        var GG = ((G.toString(16).length==1)?"0"+G.toString(16):G.toString(16));
-        var BB = ((B.toString(16).length==1)?"0"+B.toString(16):B.toString(16));
         return "#"+RR+GG+BB;
     }
 </script>
