@@ -220,6 +220,11 @@
         </div>
 
         <div class="input-row">
+            <label class="label-tech">Nome do Veículo (Opcional)</label>
+            <input type="text" id="carName" placeholder="Ex: Honda Civic">
+        </div>
+
+        <div class="input-row">
             <label class="label-tech">Preço por Litro (R$)</label>
             <input type="tel" inputmode="numeric" id="price" placeholder="0,00" onkeyup="maskCurrency(this)">
         </div>
@@ -275,6 +280,12 @@
                 <span id="rec-date">--/--/--</span>
                 <span id="rec-time">--:--</span>
             </div>
+
+            <div class="receipt-row" id="row-car-name" style="display:none; margin-top:5px;">
+                <span>VEICULO</span>
+                <span id="rec-car-name">--</span>
+            </div>
+
             <div class="receipt-divider"></div>
             
             <div class="receipt-row">
@@ -362,9 +373,6 @@
         else { odoDiv.style.display = 'block'; tripDiv.style.display = 'none'; }
     }
 
-    // --- MÁSCARAS ---
-    
-    // Máscara Automática (Divide por 100) - APENAS PREÇO E TOTAL
     function maskCurrency(input) {
         let value = input.value.replace(/\D/g, "");
         if (value === "") { input.value = ""; return; }
@@ -374,15 +382,12 @@
         input.value = value;
     }
 
-    // Máscara Inteira (Sem virgula) - Para Odômetro
     function maskInteger(input) {
         input.value = input.value.replace(/\D/g, "");
     }
 
-    // Função para ler o valor dos campos mascarados
     function parseLocaleNumber(stringNumber) {
         if (!stringNumber) return 0;
-        // Se for string, limpa pontos e troca virgula
         if (typeof stringNumber === 'string') {
              let cleaned = stringNumber.replace(/\./g, '').replace(',', '.');
              return parseFloat(cleaned);
@@ -391,11 +396,9 @@
     }
 
     function calculate() {
-        // Campos com Máscara
         const price = parseLocaleNumber(document.getElementById('price').value);
         const total = parseLocaleNumber(document.getElementById('total').value);
         
-        // Campos Sem Máscara (Lê direto, aceita ponto ou virgula nativo)
         let litersVal = document.getElementById('liters').value.replace(',', '.');
         let litersInput = parseFloat(litersVal) || 0;
         
@@ -406,7 +409,6 @@
             let distVal = document.getElementById('kmDistance').value.replace(',', '.');
             distance = parseFloat(distVal) || 0;
         } else {
-            // KM Start/End são inteiros (mas parseamos para garantir)
             const start = parseLocaleNumber(document.getElementById('kmStart').value);
             const end = parseLocaleNumber(document.getElementById('kmEnd').value);
             if (end > start) {
@@ -435,6 +437,17 @@
         document.getElementById('rec-time').innerText = now.toLocaleTimeString('pt-BR');
         document.getElementById('rec-fuel').innerText = currentFuel.toUpperCase();
         
+        // --- NOME DO CARRO (Opcional) ---
+        const carName = document.getElementById('carName').value;
+        const rowCar = document.getElementById('row-car-name');
+        const recCar = document.getElementById('rec-car-name');
+        if (carName.trim() !== "") {
+            recCar.innerText = carName.toUpperCase();
+            rowCar.style.display = "flex";
+        } else {
+            rowCar.style.display = "none";
+        }
+
         document.getElementById('rec-price').innerText = price > 0 ? price.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '--';
         document.getElementById('rec-liters').innerText = finalLiters.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + " L";
         document.getElementById('rec-total').innerText = (total > 0 ? total : (finalLiters*price)).toLocaleString('pt-BR', {minimumFractionDigits: 2});
@@ -461,14 +474,9 @@
                 canvas.toBlob(async (blob) => {
                     const file = new File([blob], "comprovante_consumo.png", { type: "image/png" });
                     
-                    // Verifica suporte a compartilhamento
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                         try {
-                            await navigator.share({ 
-                                files: [file], 
-                                title: 'Calculador de Consumo', 
-                                // REMOVIDO: text: 'Olha o desempenho...' 
-                            });
+                            await navigator.share({ files: [file], title: 'Calculador de Consumo' });
                         } catch (error) { console.log('Cancelado pelo usuário', error); }
                     } else {
                         const link = document.createElement('a');
