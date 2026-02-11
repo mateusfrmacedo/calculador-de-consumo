@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Calculador de Consumo</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- VARIÁVEIS --- */
+        :root {
+            --carbon: #111;
+            --metal: #222;
+            --text: #eee;
+            --glow: #ff3b30; /* Dinâmico */
+            --led-off: #330000;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Chakra Petch', sans-serif;
+            background-color: var(--carbon);
+            /* Textura Fibra de Carbono */
+            background-image: 
+                linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000),
+                linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000);
+            background-size: 8px 8px;
+            background-position: 0 0, 4px 4px;
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* --- TÍTULO METÁLICO --- */
+        h1 {
+            font-family: 'Russo One', sans-serif;
+            text-align: center;
+            text-transform: uppercase;
+            font-size: 26px;
+            margin: 10px 0 25px 0;
+            letter-spacing: 1px;
+            
+            /* Efeito Metálico no Texto */
+            background: linear-gradient(180deg, #ffffff 0%, #a0a0a0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+        }
+
+        /* --- CARD PAINEL --- */
+        .dashboard-panel {
+            background: linear-gradient(180deg, #2b2b2b 0%, #1a1a1a 100%);
+            border: 1px solid #444;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 
+                0 0 0 1px #000, 
+                0 10px 30px rgba(0,0,0,0.8),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        /* Parafusos Allen */
+        .bolt {
+            position: absolute;
+            width: 10px; height: 10px;
+            background: radial-gradient(circle, #555 30%, #222 100%);
+            border-radius: 50%;
+            box-shadow: 0 1px 2px #000;
+            border: 1px solid #111;
+        }
+        .tl { top: 10px; left: 10px; }
+        .tr { top: 10px; right: 10px; }
+        .bl { bottom: 10px; left: 10px; }
+        .br { bottom: 10px; right: 10px; }
+
+        /* --- SELETOR DE COMBUSTÍVEL --- */
+        .fuel-switch {
+            display: flex;
+            position: relative;
+            background: #050505;
+            padding: 4px;
+            border-radius: 50px;
+            margin-bottom: 25px;
+            border: 1px solid #333;
+            box-shadow: inset 0 3px 10px #000;
+            overflow: hidden;
+        }
+
+        .fuel-switch label {
+            flex: 1;
+            text-align: center;
+            padding: 12px 0;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            z-index: 2;
+            color: #666;
+            transition: color 0.3s ease;
+            font-family: 'Russo One', sans-serif;
+            user-select: none;
+        }
+        
+        .fuel-switch input { display: none; }
+        
+        .fuel-glider {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc(33.33% - 5px);
+            height: calc(100% - 8px);
+            border-radius: 40px;
+            background: linear-gradient(180deg, #333 0%, #222 100%);
+            border-top: 1px solid #555;
+            transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1;
+        }
+
+        /* Estados da Animação */
+        #gas:checked ~ .fuel-glider { 
+            transform: translateX(0%); 
+            background: linear-gradient(180deg, #cc2900 0%, #990000 100%);
+            box-shadow: 0 0 15px rgba(255, 59, 48, 0.6);
+            border-color: #ff5e55;
+        }
+        #gas:checked + label { color: #fff; text-shadow: 0 0 5px rgba(0,0,0,0.5); }
+
+        #alc:checked ~ .fuel-glider { 
+            transform: translateX(100%); 
+            background: linear-gradient(180deg, #2dce55 0%, #1e8e39 100%);
+            box-shadow: 0 0 15px rgba(52, 199, 89, 0.6);
+            border-color: #5eff86;
+        }
+        #alc:checked + label { color: #fff; text-shadow: 0 0 5px rgba(0,0,0,0.5); }
+
+        #dsl:checked ~ .fuel-glider { 
+            transform: translateX(202%);
+            background: linear-gradient(180deg, #ff9f0a 0%, #c47700 100%);
+            box-shadow: 0 0 15px rgba(255, 149, 0, 0.6);
+            border-color: #ffc060;
+        }
+        #dsl:checked + label { color: #fff; text-shadow: 0 0 5px rgba(0,0,0,0.5); }
+
+
+        /* --- SWITCH MODE --- */
+        .mode-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        .toggle-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #888;
+            font-weight: 700;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider-round {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #111;
+            border: 1px solid #444;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider-round:before {
+            position: absolute;
+            content: "";
+            height: 16px; width: 16px;
+            left: 3px; bottom: 3px;
+            background-color: #888;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: inset 1px 1px 2px #fff;
+        }
+        input:checked + .slider-round { background-color: var(--glow); border-color: var(--glow); }
+        input:checked + .slider-round:before { transform: translateX(26px); background-color: #fff; }
+
+
+        /* --- INPUTS --- */
+        .input-row { margin-bottom: 15px; }
+        
+        .label-tech {
+            font-size: 11px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            background: #000;
+            border: 1px solid #333;
+            color: var(--glow);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            outline: none;
+            transition: 0.3s;
+        }
+        input[type="number"]:focus {
+            border-color: var(--glow);
+            box-shadow: 0 0 15px var(--glow);
+        }
+
+
+        /* --- BOTÃO IGNIÇÃO --- */
+        .btn-start {
+            width: 100%;
+            background: radial-gradient(circle, #333 0%, #111 100%);
+            border: 2px solid #444;
+            color: #888;
+            font-family: 'Russo One', sans-serif;
+            font-size: 18px;
+            text-transform: uppercase;
+            padding: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: 0.3s;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-start:hover {
+            border-color: var(--glow);
+            color: #fff;
+            text-shadow: 0 0 10px var(--glow);
+            box-shadow: 0 0 20px var(--glow);
+        }
+        
+        .btn-start:active { transform: scale(0.98); }
+
+
+        /* --- RESULTADO --- */
+        #telemetry {
+            display: none;
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            position: relative;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.9);
+        }
+
+        .led-indicator {
+            position: absolute;
+            top: 15px; right: 15px;
+            width: 12px; height: 12px;
+            background-color: var(--led-off);
+            border-radius: 50%;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.8);
+            border: 1px solid #222;
+            transition: background-color 0.3s;
+        }
+        
+        .led-active {
+            background-color: var(--glow);
+            box-shadow: 0 0 10px var(--glow), 0 0 20px var(--glow);
+            animation: pulse 0.8s infinite alternate;
+        }
+
+        @keyframes pulse { from { opacity: 0.4; } to { opacity: 1; } }
+
+        .main-stat {
+            text-align: center;
+            border-bottom: 1px solid #222;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .big-number {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 52px;
+            color: var(--glow);
+            text-shadow: 0 0 15px var(--glow);
+        }
+        
+        .unit { font-size: 16px; color: #666; font-weight: 700; }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-box {
+            background: #0a0a0a;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 2px solid #333;
+        }
+        
+        .stat-val {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 16px;
+            color: #fff;
+            margin-top: 4px;
+        }
+
+        .diagnosis-text {
+            text-align: center;
+            font-size: 14px;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-top: 15px;
+            padding: 8px;
+            background: #111;
+            border-radius: 4px;
+            color: var(--glow);
+            border: 1px solid #333;
+        }
+
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            width: 100%;
+        }
+        footer a {
+            font-size: 12px;
+            color: #666;
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: 0.3s;
+        }
+        footer a:hover { color: var(--glow); text-shadow: 0 0 10px var(--glow); }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <h1>Calculador de Consumo</h1>
+
+    <div class="dashboard-panel">
+        <div class="bolt tl"></div><div class="bolt tr"></div>
+        <div class="bolt bl"></div><div class="bolt br"></div>
+
+        <div class="fuel-switch">
+            <input type="radio" name="fuel" id="gas" value="gasolina" checked onchange="updateSystem('gasolina')">
+            <label for="gas">Gasolina</label>
+            
+            <input type="radio" name="fuel" id="alc" value="etanol" onchange="updateSystem('etanol')">
+            <label for="alc">Etanol</label>
+            
+            <input type="radio" name="fuel" id="dsl" value="diesel" onchange="updateSystem('diesel')">
+            <label for="dsl">Diesel</label>
+            
+            <div class="fuel-glider"></div>
+        </div>
+
+        <div class="input-row">
+            <label class="label-tech">Preço por Litro (R$)</label>
+            <input type="number" id="price" placeholder="0.00" step="0.01">
+        </div>
+        <div class="input-row">
+            <label class="label-tech">Total Abastecido (R$)</label>
+            <input type="number" id="total" placeholder="0.00" step="0.01">
+        </div>
+
+        <div class="mode-toggle">
+            <span class="toggle-label" id="label-odo" style="color:#fff">Odômetro</span>
+            <label class="switch">
+                <input type="checkbox" id="modeSwitch" onchange="toggleMode()">
+                <span class="slider-round"></span>
+            </label>
+            <span class="toggle-label" id="label-trip">Trip A</span>
+        </div>
+
+        <div id="odo-inputs">
+            <div class="input-row">
+                <label class="label-tech">KM Inicial (Painel)</label>
+                <input type="number" id="kmStart" placeholder="00000">
+            </div>
+            <div class="input-row">
+                <label class="label-tech">KM Final (Atual)</label>
+                <input type="number" id="kmEnd" placeholder="00000">
+            </div>
+        </div>
+
+        <div id="trip-input" style="display:none;">
+            <div class="input-row">
+                <label class="label-tech">Distância Percorrida (KM)</label>
+                <input type="number" id="kmDistance" placeholder="000.0">
+            </div>
+        </div>
+
+        <button class="btn-start" onclick="calculate()">START ENGINE</button>
+    </div>
+
+    <div id="telemetry">
+        <div class="led-indicator" id="statusLed"></div>
+        
+        <div class="main-stat">
+            <div class="label-tech">Eficiência Média</div>
+            <span class="big-number" id="res-kml">0.0</span> <span class="unit">KM/L</span>
+        </div>
+
+        <div class="stat-grid">
+            <div class="stat-box">
+                <div class="label-tech">Custo/KM</div>
+                <div class="stat-val" id="res-costKm">R$ 0.00</div>
+            </div>
+            <div class="stat-box">
+                <div class="label-tech">Litros Usados</div>
+                <div class="stat-val" id="res-liters">0.0 L</div>
+            </div>
+            <div class="stat-box">
+                <div class="label-tech">Custo/100km</div>
+                <div class="stat-val" id="res-cost100">R$ 0.00</div>
+            </div>
+            <div class="stat-box">
+                <div class="label-tech">Distância</div>
+                <div class="stat-val" id="res-dist">0 km</div>
+            </div>
+        </div>
+
+        <div class="diagnosis-text" id="diag-text">AGUARDANDO DADOS...</div>
+    </div>
+
+    <footer>
+        <a href="https://mateusfrmacedo.github.io/">Created by Mateus</a>
+    </footer>
+
+</div>
+
+<script>
+    const colors = {
+        gasolina: '#ff3b30',
+        etanol: '#34c759',
+        diesel: '#ff9500'
+    };
+
+    let currentFuel = 'gasolina';
+
+    window.onload = function() {
+        const lastKm = localStorage.getItem('lastKmEnd');
+        if (lastKm) document.getElementById('kmStart').value = lastKm;
+        updateSystem('gasolina');
+    };
+
+    function updateSystem(fuel) {
+        currentFuel = fuel;
+        const color = colors[fuel];
+        document.documentElement.style.setProperty('--glow', color);
+        document.documentElement.style.setProperty('--led-off', shadeColor(color, -80));
+    }
+
+    function toggleMode() {
+        const isTripMode = document.getElementById('modeSwitch').checked;
+        const odoDiv = document.getElementById('odo-inputs');
+        const tripDiv = document.getElementById('trip-input');
+        
+        document.getElementById('label-odo').style.color = isTripMode ? '#888' : '#fff';
+        document.getElementById('label-trip').style.color = isTripMode ? '#fff' : '#888';
+
+        if (isTripMode) {
+            odoDiv.style.display = 'none';
+            tripDiv.style.display = 'block';
+        } else {
+            odoDiv.style.display = 'block';
+            tripDiv.style.display = 'none';
+        }
+    }
+
+    function calculate() {
+        const price = parseFloat(document.getElementById('price').value);
+        const total = parseFloat(document.getElementById('total').value);
+        
+        let distance = 0;
+        const isTripMode = document.getElementById('modeSwitch').checked;
+
+        if (isTripMode) {
+            distance = parseFloat(document.getElementById('kmDistance').value);
+        } else {
+            const start = parseFloat(document.getElementById('kmStart').value);
+            const end = parseFloat(document.getElementById('kmEnd').value);
+            if (end > start) {
+                distance = end - start;
+                localStorage.setItem('lastKmEnd', end);
+            }
+        }
+
+        if (!price || !total || !distance || distance <= 0) {
+            alert("ERRO DE TELEMETRIA: Verifique os dados inseridos.");
+            return;
+        }
+
+        const liters = total / price;
+        const kml = distance / liters;
+        const costPerKm = total / distance;
+        const costPer100 = costPerKm * 100;
+
+        document.getElementById('res-kml').innerText = kml.toFixed(1);
+        document.getElementById('res-liters').innerText = liters.toFixed(1) + " L";
+        document.getElementById('res-costKm').innerText = "R$ " + costPerKm.toFixed(2);
+        document.getElementById('res-cost100').innerText = "R$ " + costPer100.toFixed(0);
+        document.getElementById('res-dist').innerText = distance + " km";
+
+        doDiagnostics(kml);
+        
+        const led = document.getElementById('statusLed');
+        led.classList.add('led-active');
+
+        const panel = document.getElementById('telemetry');
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function doDiagnostics(kml) {
+        const textDiv = document.getElementById('diag-text');
+        let msg = "Consumo Normal";
+        
+        let isHigh = false;
+        let isEco = false;
+
+        if (currentFuel === 'gasolina') {
+            if (kml < 8) isHigh = true;
+            if (kml > 12) isEco = true;
+        } else if (currentFuel === 'etanol') {
+            if (kml < 6) isHigh = true;
+            if (kml > 9) isEco = true;
+        } else {
+            if (kml < 9) isHigh = true;
+            if (kml > 13) isEco = true;
+        }
+
+        if (isHigh) msg = "ALERTA: Consumo Alto";
+        if (isEco) msg = "OTIMIZADO: Econômico";
+
+        textDiv.innerText = msg;
+    }
+
+    function shadeColor(color, percent) {
+        var R = parseInt(color.substring(1,3),16);
+        var G = parseInt(color.substring(3,5),16);
+        var B = parseInt(color.substring(5,7),16);
+
+        R = parseInt(R * (100 + percent) / 100);
+        G = parseInt(G * (100 + percent) / 100);
+        B = parseInt(B * (100 + percent) / 100);
+
+        R = (R<255)?R:255; G = (G<255)?G:255; B = (B<255)?B:255;
+
+        var RR = ((R.toString(16).length==1)?"0"+R.toString(16):R.toString(16));
+        var GG = ((G.toString(16).length==1)?"0"+G.toString(16):G.toString(16));
+        var BB = ((B.toString(16).length==1)?"0"+B.toString(16):B.toString(16));
+
+        return "#"+RR+GG+BB;
+    }
+</script>
+
+</body>
+</html>
