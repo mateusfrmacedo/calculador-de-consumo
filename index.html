@@ -106,7 +106,9 @@
 
         .input-row { margin-bottom: 15px; }
         .label-tech { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: block; }
-        input[type="text"], input[type="number"] {
+        
+        /* Inputs */
+        input[type="text"], input[type="tel"] {
             width: 100%; background: #000; border: 1px solid #333; color: var(--glow);
             font-family: 'Share Tech Mono', monospace; font-size: 20px; padding: 12px;
             border-radius: 6px; outline: none; transition: 0.3s;
@@ -134,12 +136,11 @@
         .btn-start:hover { border-color: var(--glow); color: #fff; text-shadow: 0 0 10px var(--glow); box-shadow: 0 0 20px var(--glow); }
         .btn-start:active { transform: scale(0.98); }
 
-        /* --- CUPOM FISCAL --- */
+        /* --- CUPOM FISCAL RETO --- */
         #receipt-container {
             display: none;
             margin-top: 40px;
             width: 100%;
-            perspective: 1000px;
         }
 
         .receipt {
@@ -161,14 +162,13 @@
             text-transform: uppercase;
             font-size: 20px;
             line-height: 1.1;
-            transform: rotate(-1deg);
             
-            /* Bordas retas (corte seco) */
+            /* REMOVIDO: transform: rotate(-1deg); -> Agora é reto */
+            transform: none; 
+            
             border-top: 1px solid #e0dfd5;
             border-bottom: 1px solid #e0dfd5;
         }
-
-        /* Removi os pseudo-elementos ::before e ::after que faziam o picotado */
 
         .receipt-header { text-align: center; margin-bottom: 15px; border-bottom: 1px dashed #555; padding-bottom: 10px; }
         .receipt-title { font-size: 26px; font-weight: bold; display: block; margin-bottom: 5px; letter-spacing: -1px; }
@@ -192,6 +192,7 @@
             margin-top: 25px; cursor: pointer; border-radius: 4px; display: block;
             width: 100%; max-width: 320px; margin-left: auto; margin-right: auto;
             box-shadow: 0 0 15px rgba(255,255,255,0.2); transition: 0.3s;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
         }
         .btn-share:hover { background: var(--glow); color: #fff; }
 
@@ -223,15 +224,15 @@
 
         <div class="input-row">
             <label class="label-tech">Preço por Litro (R$)</label>
-            <input type="text" inputmode="decimal" id="price" placeholder="0.00">
+            <input type="tel" inputmode="numeric" id="price" placeholder="0,00" onkeyup="maskCurrency(this)">
         </div>
         <div class="input-row">
             <label class="label-tech">Total Abastecido (R$)</label>
-            <input type="text" inputmode="decimal" id="total" placeholder="0.00">
+            <input type="tel" inputmode="numeric" id="total" placeholder="0,00" onkeyup="maskCurrency(this)">
         </div>
         <div class="input-row">
             <label class="label-tech">Litros (Opcional)</label>
-            <input type="text" inputmode="decimal" id="liters" placeholder="0.00 L">
+            <input type="tel" inputmode="numeric" id="liters" placeholder="0,00 L" onkeyup="maskCurrency(this)">
         </div>
 
         <div class="mode-toggle">
@@ -246,18 +247,18 @@
         <div id="odo-inputs">
             <div class="input-row">
                 <label class="label-tech">KM Inicial (Painel)</label>
-                <input type="number" id="kmStart" placeholder="00000">
+                <input type="tel" inputmode="numeric" id="kmStart" placeholder="00000" onkeyup="maskInteger(this)">
             </div>
             <div class="input-row">
                 <label class="label-tech">KM Final (Atual)</label>
-                <input type="number" id="kmEnd" placeholder="00000">
+                <input type="tel" inputmode="numeric" id="kmEnd" placeholder="00000" onkeyup="maskInteger(this)">
             </div>
         </div>
 
         <div id="trip-input" style="display:none;">
             <div class="input-row">
                 <label class="label-tech">Distância Percorrida (KM)</label>
-                <input type="text" inputmode="decimal" id="kmDistance" placeholder="000.0">
+                <input type="tel" inputmode="numeric" id="kmDistance" placeholder="000.0" onkeyup="maskCurrency(this)">
             </div>
         </div>
 
@@ -324,7 +325,9 @@
             </div>
         </div>
 
-        <button class="btn-share" onclick="downloadReceipt()">SALVAR COMPROVANTE</button>
+        <button class="btn-share" onclick="shareReceipt()">
+            COMPARTILHAR / SALVAR
+        </button>
     </div>
 
     <footer>
@@ -362,25 +365,56 @@
         else { odoDiv.style.display = 'block'; tripDiv.style.display = 'none'; }
     }
 
-    function getSafeFloat(id) {
-        let val = document.getElementById(id).value;
-        if (!val) return 0;
-        val = val.replace(',', '.');
-        return parseFloat(val);
+    // --- MÁSCARAS DE DIGITAÇÃO INTELIGENTE ---
+    
+    // Máscara para Moeda/Decimal (Ex: digita 550 -> vira 5,50)
+    function maskCurrency(input) {
+        let value = input.value.replace(/\D/g, ""); // Remove tudo que não é número
+        
+        if (value === "") {
+            input.value = "";
+            return;
+        }
+
+        // Divide por 100 para ter 2 casas decimais
+        value = (parseInt(value) / 100).toFixed(2) + "";
+        
+        // Troca ponto por virgula
+        value = value.replace(".", ",");
+        
+        // Adiciona ponto de milhar (Opcional, mas bom para valores altos)
+        value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        
+        input.value = value;
+    }
+
+    // Máscara para Inteiros (KM do painel geralmente não tem virgula)
+    function maskInteger(input) {
+        input.value = input.value.replace(/\D/g, ""); // Apenas números
+    }
+
+    // Função para interpretar o valor formatado de volta para número (para cálculo)
+    function parseLocaleNumber(stringNumber) {
+        if (!stringNumber) return 0;
+        // Remove pontos de milhar e troca virgula por ponto
+        let cleaned = stringNumber.replace(/\./g, '').replace(',', '.');
+        return parseFloat(cleaned);
     }
 
     function calculate() {
-        const price = getSafeFloat('price');
-        const total = getSafeFloat('total');
-        let litersInput = getSafeFloat('liters');
+        // Usa o novo parser para ler os valores com virgula
+        const price = parseLocaleNumber(document.getElementById('price').value);
+        const total = parseLocaleNumber(document.getElementById('total').value);
+        let litersInput = parseLocaleNumber(document.getElementById('liters').value);
+        
         let distance = 0;
         const isTripMode = document.getElementById('modeSwitch').checked;
 
         if (isTripMode) {
-            distance = getSafeFloat('kmDistance');
+            distance = parseLocaleNumber(document.getElementById('kmDistance').value);
         } else {
-            const start = getSafeFloat('kmStart');
-            const end = getSafeFloat('kmEnd');
+            const start = parseLocaleNumber(document.getElementById('kmStart').value);
+            const end = parseLocaleNumber(document.getElementById('kmEnd').value);
             if (end > start) {
                 distance = end - start;
                 localStorage.setItem('lastKmEnd', end);
@@ -406,13 +440,15 @@
         document.getElementById('rec-date').innerText = now.toLocaleDateString('pt-BR');
         document.getElementById('rec-time').innerText = now.toLocaleTimeString('pt-BR');
         document.getElementById('rec-fuel').innerText = currentFuel.toUpperCase();
-        document.getElementById('rec-price').innerText = price > 0 ? price.toFixed(2) : '--';
-        document.getElementById('rec-liters').innerText = finalLiters.toFixed(2) + " L";
-        document.getElementById('rec-total').innerText = (total > 0 ? total : (finalLiters*price)).toFixed(2);
+        
+        // Formatando resultados com virgula
+        document.getElementById('rec-price').innerText = price > 0 ? price.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '--';
+        document.getElementById('rec-liters').innerText = finalLiters.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + " L";
+        document.getElementById('rec-total').innerText = (total > 0 ? total : (finalLiters*price)).toLocaleString('pt-BR', {minimumFractionDigits: 2});
         
         document.getElementById('rec-dist').innerText = distance + " KM";
-        document.getElementById('rec-kml').innerText = kml.toFixed(1) + " KM/L";
-        document.getElementById('rec-cost').innerText = "R$ " + costPerKm.toFixed(2);
+        document.getElementById('rec-kml').innerText = kml.toLocaleString('pt-BR', {minimumFractionDigits: 1}) + " KM/L";
+        document.getElementById('rec-cost').innerText = "R$ " + costPerKm.toLocaleString('pt-BR', {minimumFractionDigits: 2});
 
         let status = "CONSUMO NORMAL";
         if (currentFuel === 'gasolina' && kml > 12) status = "ECONOMICO";
@@ -425,19 +461,24 @@
         container.scrollIntoView({ behavior: 'smooth' });
     }
 
-    function downloadReceipt() {
+    function shareReceipt() {
         const receiptElement = document.getElementById('receipt');
-        
         document.fonts.ready.then(function () {
-            html2canvas(receiptElement, {
-                scale: 2,
-                backgroundColor: null,
-                useCORS: true 
-            }).then(canvas => {
-                const link = document.createElement('a');
-                link.download = 'comprovante-consumo.png';
-                link.href = canvas.toDataURL();
-                link.click();
+            html2canvas(receiptElement, { scale: 2, backgroundColor: null, useCORS: true }).then(canvas => {
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], "comprovante_consumo.png", { type: "image/png" });
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({ files: [file], title: 'Calculador de Consumo', text: 'Olha o desempenho do meu carro!' });
+                        } catch (error) { console.log('Cancelado pelo usuário', error); }
+                    } else {
+                        const link = document.createElement('a');
+                        link.download = 'comprovante-consumo.png';
+                        link.href = canvas.toDataURL();
+                        link.click();
+                        alert("Comprovante salvo! Você pode postar manualmente.");
+                    }
+                }, 'image/png');
             });
         });
     }
